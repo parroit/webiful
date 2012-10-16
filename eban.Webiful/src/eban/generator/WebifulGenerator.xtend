@@ -37,6 +37,11 @@ import java.util.UUID
 import java.util.ArrayList
 import com.google.common.base.Joiner
 import java.util.List
+import eban.webiful.MethodOrMagic
+import eban.webiful.FeatureOrMagic
+import eban.webiful.Feature
+import eban.webiful.MagicPhp
+import eban.webiful.MagicPhpBlock
 
 class WebifulGenerator implements IGenerator {
 	Param runtimeType
@@ -94,11 +99,7 @@ class WebifulGenerator implements IGenerator {
 		
 		
 		«FOR f:e.features»
-			«IF f instanceof Method »
-				«(f as Method).compile»
-			«ELSEIF f instanceof Property»
-				«(f as Property).compile»
-			«ENDIF»
+			«f.compile»
 		«ENDFOR»
 	}
 	'''
@@ -110,22 +111,39 @@ class WebifulGenerator implements IGenerator {
 	def compile(Controller e) 
 		'''class «e.fullyQualifiedName.toString("_")»«IF e.superType != null» extends «e.superType.fullyQualifiedName.toString("_")»«ENDIF» {
 		«FOR f:e.features»
-			«f.compile»
+			«f.compileMM»
 		«ENDFOR»
 		}
 		
 	'''
+	def compileMM(MethodOrMagic magic) {
+		if (magic instanceof Method)
+			return (magic as Method).compile
+		if (magic instanceof MagicPhpBlock)
+			return (magic as MagicPhpBlock).compile
+			
+	}
+
+
+	def compile(FeatureOrMagic magic) {
+		if (magic instanceof Property)
+			return (magic as Property).compile
+		if (magic instanceof Method)
+			return (magic as Method).compile
+		if (magic instanceof MagicPhpBlock)
+			return (magic as MagicPhpBlock).compile
+	}
+
+	
 
 		
 	def compileEntity(Entity e) 
 		'''class «e.fullyQualifiedName.toString("_")»«IF e.superType != null» extends «e.superType.fullyQualifiedName.toString("_")»«ENDIF» {
 		
 		«FOR f:e.features»
-			«IF f instanceof Method »
-				«(f as Method).compile»
-			«ELSEIF f instanceof Property»
-				«(f as Property).compile»
-			«ENDIF»
+			
+			«f.compile»
+			
 		«ENDFOR»
 		
 	}
@@ -221,8 +239,9 @@ class WebifulGenerator implements IGenerator {
 		'''«decl.op.toString»«decl.operand.compile(statements)»'''
 	
 	def compile(Instantiation instantiation,List<CharSequence> statements){
-		
-		return '''new «instantiation.caller.fullyQualifiedName.toString("_")»«instantiation.params.compile(statements)»'''	
+		var varName="tmp_"+UUID::randomUUID().toString.replace("-","")
+		statements.add('''$«varName»=new «instantiation.caller.fullyQualifiedName.toString("_")»«instantiation.params.compile(statements)»''')
+		return '''$«varName»'''	
 	}
 		
 
@@ -245,9 +264,9 @@ class WebifulGenerator implements IGenerator {
 	}
 	
 	def CharSequence compile(ParamCall call,List<CharSequence> statements) {
-		var varName="tmp_"+UUID::randomUUID().toString.replace("-","")
-		statements.add('''$«varName»=«call.xp.compile(statements)»''')
-		return "$"+varName
+//		var varName="tmp_"+UUID::randomUUID().toString.replace("-","")
+//		statements.add('''$«varName»=«call.xp.compile(statements)»''')
+		return call.xp.compile(statements)
 	}
 
 	
@@ -299,14 +318,16 @@ class WebifulGenerator implements IGenerator {
 		return "$"+call.varKind.name
 	} 
 	def compile(MemberCall call,List<CharSequence> statements) {
-		var varName="tmp_"+UUID::randomUUID().toString.replace("-","")
-		statements.add('''$«varName»=«call.caller.compile(statements)»''')
-		return '''$«varName»->«IF call.member instanceof Property»«(call.member as Property).name»«ELSE»«(call.member as Method).name»«call.methodsParams.compile(statements)»«ENDIF»'''
+//		var varName="tmp_"+UUID::randomUUID().toString.replace("-","")
+//		statements.add('''$«varName»=«call.caller.compile(statements)»''')
+		return '''«call.caller.compile(statements)»->«IF call.member instanceof Property»«(call.member as Property).name»«ELSE»«(call.member as Method).name»«call.methodsParams.compile(statements)»«ENDIF»'''
 	}
 	
 	def compile(MagicPhp mag,List<CharSequence> statements) 
 		'''«mag.instr»'''
-	
+	def compile(MagicPhpBlock mag) 
+		'''«mag.instr»'''
+		
 	def compileConstructorParam(Param prop) '''
 		private $_«prop.name»;
 		function set_«prop.name»($value) {

@@ -75,27 +75,32 @@ Import:
 //	QualifiedName '.*'?;
 
 Type:
-	Clazz | Entity | EntryPoint | Controller | DataType;
+	Clazz | Entity | EntryPoint | Controller | DataType | MagicPhp;
 
 DataType:
 	'datatype' name=ID;
 
 Entity:
 	'entity' name=ID (OP_MAPTO superType=[Entity | QualifiedName	])? '{'
-	features+=Feature*
+	features+=FeatureOrMagic*
 	'}';
 	
 Clazz:
 	'class' name=ID (OP_MAPTO superType=[Clazz | QualifiedName	])? params=Params?'{'
-	features+=Feature*
+	features+=FeatureOrMagic*
 	'}';
 	
 Controller:
 	'controller' name=ID (OP_MAPTO superType=[Controller | QualifiedName	])? '{'
-	features+=Method*
+	features+=MethodOrMagic*
 	'}';
 
-
+MethodOrMagic:
+	Method| MagicPhpBlock
+;
+FeatureOrMagic:
+	Feature| MagicPhpBlock
+;
 
 Feature:
 	Property | Method;
@@ -109,11 +114,11 @@ Param:
 ;
 
 Params:
-	'[' (
+	'(' (
 		list+=Param (',' list+=Param)* 
-	) ']' | 
+	) ')' | 
 	{Params}
-	'[' ']'
+	'(' ')'
 ;
 
 
@@ -122,11 +127,11 @@ ParamCall:
 ;
 
 ParamsCall:
-	'[' (
+	'(' (
 		list+=ParamCall (',' list+=ParamCall)* 
-	) ']' | 
+	) ')' | 
 	{ParamsCall}
-	'[' ']'
+	'(' ')'
 ;
 	
 
@@ -189,8 +194,12 @@ Return:
 ;
 	
 MagicPhp:
+	'_(' instr=STRING ')_'
+;
+MagicPhpBlock:
 	'__(' instr=STRING ')__'
 ;
+
 
 
 

@@ -8,13 +8,13 @@ import com.google.inject.Inject
 import org.eclipse.xtext.junit4.util.ParseHelper
 import org.junit.Test
 import static org.junit.Assert.*
-import org.eclipselabs.xtext.utils.unittesting.XtextTest
+
 
 @InjectWith(typeof(WebifulInjectorProvider))
 @RunWith(typeof(XtextRunner))
 
 
-class TestEntity extends XtextTest{
+class TestEntity{
 	@Inject
 	ParseHelper<Webiful> parser
  

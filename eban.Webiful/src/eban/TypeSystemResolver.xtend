@@ -1,34 +1,64 @@
 package eban
 
-import eban.webiful.VarCall
-import org.eclipse.emf.ecore.EObject
-import eban.webiful.Type
-import eban.webiful.MemberCall
-import eban.webiful.Instantiation
-import eban.webiful.Property
-import eban.webiful.Method
-import eban.webiful.Param
-import eban.webiful.LocalVarDecl
-import eban.webiful.DecimalLiteral
-import eban.webiful.IntegerLiteral
-import eban.webiful.StringLiteral
 import eban.webiful.BinaryExpression
-import eban.webiful.UnaryExpression
-import eban.webiful.impl.TypeImpl
-import eban.webiful.Statement
-import java.beans.Expression
 import eban.webiful.Clazz
-import eban.webiful.EntryPoint
-import eban.webiful.Entity
 import eban.webiful.Controller
 import eban.webiful.DataType
+import eban.webiful.DecimalLiteral
+import eban.webiful.Entity
+import eban.webiful.Instantiation
+import eban.webiful.IntegerLiteral
+import eban.webiful.LocalVarDecl
+import eban.webiful.MemberCall
+import eban.webiful.Method
+import eban.webiful.Param
+import eban.webiful.Property
+import eban.webiful.Statement
+import eban.webiful.StringLiteral
+import eban.webiful.Type
+import eban.webiful.UnaryExpression
+import eban.webiful.VarCall
+import org.eclipse.emf.ecore.EObject
 
 class TypeSystemResolver {
-	def Type resolveType(EObject instr) {
-		if (instr instanceof Statement)
-			return resolveType(instr as Statement)
-		else
-			return null;
+	def Type resolveType(EObject x) {
+		if (x instanceof MemberCall){
+			return (x as MemberCall).resolveType()
+		} else if (x instanceof Instantiation){
+			return (x as Instantiation).resolveType()
+		} else if (x instanceof BinaryExpression){
+			return(x as BinaryExpression).resolveType()
+		}
+		else if (x instanceof UnaryExpression){
+			return(x as UnaryExpression).resolveType()
+		}
+		else if (x instanceof VarCall){
+			return(x as VarCall).resolveType()
+		}
+		else if (x instanceof Property){
+			return(x as Property).resolveType()
+		}
+		else if (x instanceof Method){
+			return(x as Method).resolveType()
+		}
+		else if (x instanceof Param){
+			return(x as Param).resolveType()
+		}
+		else if (x instanceof DecimalLiteral){
+			return(x as DecimalLiteral).resolveType()
+		}
+		else if (x instanceof IntegerLiteral){
+			return(x as IntegerLiteral).resolveType()
+		}
+		else if (x instanceof StringLiteral){
+			return(x as StringLiteral).resolveType()
+		}
+		else if (x instanceof LocalVarDecl){
+			return(x as LocalVarDecl).resolveType()
+		}
+		
+		println("Unknown EObject :"+x)
+		return null
 					
 	}
 	def getTypeName(Type type){
@@ -50,22 +80,7 @@ class TypeSystemResolver {
 		
 		
 	}
-	def Type resolveType(Statement x) {
-		if (x instanceof MemberCall){
-			return (x as MemberCall).resolveType()
-		} else if (x instanceof Instantiation){
-			return (x as Instantiation).resolveType()
-		} else if (x instanceof BinaryExpression){
-			return(x as BinaryExpression).resolveType()
-		}
-		else if (x instanceof UnaryExpression){
-			return(x as UnaryExpression).resolveType()
-		}
-		else if (x instanceof VarCall){
-			return(x as VarCall).resolveType()
-		}
-		return null
-	}
+	
 	def Type resolveType(Property instr) {
 		return instr.type
 	}
@@ -100,6 +115,8 @@ class TypeSystemResolver {
 	def Type resolveType(Method instr) {
 		return instr.type
 	}
+	
+	
 	
 	def Type resolveType(MemberCall instr) {
 		println("Member is "+instr.member)

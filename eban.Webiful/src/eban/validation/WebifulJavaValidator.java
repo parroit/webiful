@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 
 import eban.webiful.Entity;
 import eban.webiful.Feature;
+import eban.webiful.FeatureOrMagic;
 import eban.webiful.Method;
 import eban.webiful.Property;
 import eban.webiful.WebifulPackage;
@@ -18,7 +19,7 @@ public class WebifulJavaValidator extends AbstractWebifulJavaValidator {
 	@Check
 	public void checkFeatureNameIsUnique(Entity entity) {
 		List<String> names = Lists.newArrayList();
-		for (Feature f : entity.getFeatures()) {
+		for (FeatureOrMagic f : entity.getFeatures()) {
 			String name = null;
 			EAttribute attribute = null;
 			if (f instanceof Property)
