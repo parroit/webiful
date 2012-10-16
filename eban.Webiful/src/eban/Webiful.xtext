@@ -43,7 +43,7 @@ terminal DECIMAL :('0'..'9')+ '.'  ('0'..'9')+;
 terminal INTEGER : ('0'..'9')+;
 
 Literal:
-	DecimalLiteral | IntegerLiteral | StringLiteral
+	HashLiteral | IntegerLiteral | DecimalLiteral | StringLiteral 
 ;
 
 DecimalLiteral:
@@ -55,6 +55,28 @@ IntegerLiteral:
 StringLiteral:
 	value=STRING
 ;
+
+HashLiteral:
+	'json' '{' pairs+=HashPair (',' pairs+=HashPair)* '}' 
+;
+
+StrKeyType:
+	name=StringLiteral
+;
+IdKeyType:
+	name=ID 
+;
+
+
+KeyType:
+	IdKeyType | StrKeyType
+;
+HashPair:
+	key=(KeyType) OP_MAPTO value=Expression
+;
+
+
+
 PackageDeclaration:
 	'package' name=QualifiedName '{'
 	(elements+=AbstractElement)*
@@ -64,15 +86,13 @@ AbstractElement:
 	PackageDeclaration | Type | Import;
 
 QualifiedName:
-	ID ('.' ID)*;
+	ID (OP_DIVIDE ID)*;
 
 
 
 Import:
 	'import' importedNamespace=QualifiedName;
-//
-//QualifiedNameWithWildcard:
-//	QualifiedName '.*'?;
+
 
 Type:
 	Clazz | Entity | EntryPoint | Controller | DataType | MagicPhp;
@@ -81,17 +101,17 @@ DataType:
 	'datatype' name=ID;
 
 Entity:
-	'entity' name=ID (OP_MAPTO superType=[Entity | QualifiedName	])? '{'
+	'entity' name=ID (OP_MAPTO superType=[Entity])? '{'
 	features+=FeatureOrMagic*
 	'}';
 	
 Clazz:
-	'class' name=ID (OP_MAPTO superType=[Clazz | QualifiedName	])? params=Params?'{'
+	'class' name=ID (OP_MAPTO superType=[Clazz])? params=Params?'{'
 	features+=FeatureOrMagic*
 	'}';
 	
 Controller:
-	'controller' name=ID (OP_MAPTO superType=[Controller | QualifiedName	])? '{'
+	'controller' name=ID (OP_MAPTO superType=[Controller])? '{'
 	features+=MethodOrMagic*
 	'}';
 
@@ -106,11 +126,11 @@ Feature:
 	Property | Method;
 
 Property:
-	many?='many'? name=ID OP_MAPTO type=[Type | QualifiedName];
+	many?='many'? propertyName=ID OP_MAPTO propertyType=[Type];
 
 
 Param:
-	name=ID OP_MAPTO type=[Type | QualifiedName] 
+	name=ID OP_MAPTO type=[Type] 
 ;
 
 Params:
@@ -137,7 +157,7 @@ ParamsCall:
 
 Method:
 	
-	'fun' name=ID params=Params OP_MAPTO type=[Type | QualifiedName] 
+	'fun' name=ID params=Params OP_MAPTO type=[Type] 
 	methodBody=ExpressionsBlock
 ;	
 
@@ -153,32 +173,65 @@ ExpressionsBlock:
 	)
 ;
 
-BinaryExpression:
-	'(' leftOperand=Expression op=Operator rightOperand=Expression ')' 
-;
-
-
-UnaryExpression:
-	op=UnaryOperator operand=Expression 
-;
 
 Expression:
-	
-	(MagicPhp |  
-	Literal | 
-	Instantiation | 
-	BinaryExpression  |   
-	UnaryExpression | 
-	VarCall | 
-	MemberCall) 
+	 terms=TerminalExpr (continuation+=ContinuationExpr)* 
+	 
+	 
 ;
+
+ContinuationExpr:
+	BinaryExpression | 
+	PropertyCallExpr | 
+	MethodCallExpr /*|
+	IndexSetExpr|
+	IndexGetExpr*/ 
+;
+
+BinaryExpression:
+	binaryOp=Operator terms=TerminalExpr
+;
+UnaryExpression:
+	binaryOp=UnaryOperator terms=TerminalExpr
+;
+
+PropertyCallExpr:
+	'.' member=[Property | ID]
+;
+MethodCallExpr:
+	'.' member=[Method | ID] methodsParams=ParamsCall
+	
+;
+//
+//IndexGetExpr:
+//	'[' index=Expression ']'
+//	
+//;
+//
+//IndexSetExpr:
+//	'[' index=Expression ']' ':=' 
+//	
+//;
+
+
+TerminalExpr:
+	(
+		//UnaryExpression | 
+		Literal | 
+		VarCall | 
+		Instantiation|
+		MagicPhp 
+		
+	) 
+;
+
 
 Statement:
 	LocalVarDecl | Expression | Return | For | If 
 ;
 
 If:
-	'if' '(' condition=Expression')' then=ExpressionsBlock 'else' else=ExpressionsBlock
+	'if' '(' condition=Expression')' then=ExpressionsBlock 'else' elseBlock=ExpressionsBlock
 ;
 
 ForVar:
@@ -207,32 +260,18 @@ LocalVarDecl:
 	'var' name=ID OP_MAPTO type=[Type | QualifiedName] (OP_ASSIGN assignment=Expression)
 ;
 
-
-CalledMember:
-	Property | ( Method methodsParams=ParamsCall )
-;
-
 Instantiation:
 	'new' caller=[Type] params=ParamsCall
 ;
 
-//Reference:
-//	Feature | LocalVarDecl 
-//;
 
-MemberCall:
-	OP_LESSTHAN  caller=Expression '.'  (
-		member=[Property] |
-		member=[Method] methodsParams=ParamsCall 
-	) OP_GREATERTHAN
-;
 
 VarKinds:
 	Param | LocalVarDecl | Property
 ;
 
 VarCall:
-	OP_SHARP varKind=[VarKinds]
+	varKind=[VarKinds]
 ;
 
 Operator:
@@ -263,22 +302,3 @@ EntryPoint:
 	'routes' '{' entryPointBody=Routes '}'
 ;	
 
-
-//
-//Attribute:
-//	name=ID OP_ASSIGN value=STRING
-//;
-//
-//Attributes:
-//	list+=Attribute (list+=Attribute)* |
-//	(
-//		{Attributes}
-//		list+=Attribute?
-//	) 
-//;
-//
-//
-//Tag:
-//	OP_LESSTHAN name=ID OP_GREATERTHAN
-//;
-//

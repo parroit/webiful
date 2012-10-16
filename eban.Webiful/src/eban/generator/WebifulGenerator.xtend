@@ -14,7 +14,6 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.IFileSystemAccess
 import org.eclipse.xtext.generator.IGenerator
 import org.eclipse.xtext.naming.IQualifiedNameProvider
-import eban.webiful.MemberCall
 import eban.webiful.Instantiation
 import eban.webiful.LocalVarDecl
 import eban.webiful.Expression
@@ -42,6 +41,18 @@ import eban.webiful.FeatureOrMagic
 import eban.webiful.Feature
 import eban.webiful.MagicPhp
 import eban.webiful.MagicPhpBlock
+import eban.webiful.TerminalExpr
+import eban.webiful.ContinuationExpr
+import org.eclipse.emf.common.util.EList
+import eban.webiful.LocalVarDecl
+import eban.webiful.PropertyCallExpr
+import eban.webiful.MethodCallExpr
+
+import eban.webiful.IntegerLiteral
+import eban.webiful.DecimalLiteral
+import eban.webiful.HashLiteral
+import eban.webiful.StrKeyType
+import eban.webiful.IdKeyType
 
 class WebifulGenerator implements IGenerator {
 	Param runtimeType
@@ -67,7 +78,7 @@ class WebifulGenerator implements IGenerator {
 		
 		
 		«FOR imp: resource.allContents.toIterable.filter(typeof(Import))»
-		include '«imp.importedNamespace.toString().replace(".","/")+ ".php"»';
+		require_once '«imp.importedNamespace.toString().replace(".","/")+ ".php"»';
 		«ENDFOR»
 		
 		«FOR e: resource.allContents.toIterable.filter(typeof(Entity))»
@@ -87,16 +98,17 @@ class WebifulGenerator implements IGenerator {
 		'''
 	def compile(Clazz e) 
 		'''class «e.fullyQualifiedName.toString("_")»«IF e.superType != null» extends «e.superType.fullyQualifiedName.toString("_")»«ENDIF» {
+		«IF e.params!=null»
+			function __construct«e.params.compile» {
+				«FOR p:e.params.list»
+				$this->_«p.name»=$«p.name»;
+				«ENDFOR»
+			}
 		
-		function __construct«e.params.compile» {
 			«FOR p:e.params.list»
-			$this->_«p.name»=$«p.name»;
+				«p.compileConstructorParam»
 			«ENDFOR»
-	    }
-		«FOR p:e.params.list»
-			«p.compileConstructorParam»
-		«ENDFOR»
-		
+		«ENDIF»
 		
 		«FOR f:e.features»
 			«f.compile»
@@ -185,15 +197,54 @@ class WebifulGenerator implements IGenerator {
 			«forStatement.doBlock.compile»'''
 	}
 
-	def compile(If ifStatement,List<CharSequence> statements) {return "" }
+	def compile(If ifStatement,List<CharSequence> statements) {
+		return '''if («ifStatement.condition.compile(statements)») {
+					«ifStatement.then.compile()»
+				} else {
+					«ifStatement.elseBlock.compile()»
+				}
+				'''
+	}
 
 	def CharSequence compile (Expression x,List<CharSequence> statements) {
+		return x.terms.compile(statements) + x.continuation.compile(statements)
+		
+		
+		
+	}
+	def compile(EList<ContinuationExpr> list,List<CharSequence> statements) { 
+		var subStatements=new ArrayList<CharSequence>()
+		for (x:list){
+				
+		
+			if (x instanceof PropertyCallExpr){
+				subStatements.add((x as PropertyCallExpr).compile(statements))
+			}
+			else if (x instanceof MethodCallExpr){
+				subStatements.add((x as MethodCallExpr).compile(statements))
+			}
+			else if (x instanceof BinaryExpression){
+				subStatements.add((x as BinaryExpression).compile(statements))
+			}
+//			else if (x instanceof IndexExpr){
+//				subStatements.add((x as IndexExpr).compile(statements))
+//			}
+			
+		}
+				
+		return Joiner::on("").join(subStatements)
+	}
+//	def CharSequence compile(IndexExpr expr, List<CharSequence> statements) {
+//		return '''->get(«expr.index.compile(statements)»)'''
+//	}
+
+
+	def compile(TerminalExpr x,List<CharSequence> statements) { 
+		
 		if (x instanceof MagicPhp){
 			return (x as MagicPhp).compile(statements)
 		}
-		else if (x instanceof MemberCall){
-			return (x as MemberCall).compile(statements)
-		}
+		
 		else if (x instanceof Literal){
 			return(x as Literal).compile(statements)
 		}
@@ -201,19 +252,14 @@ class WebifulGenerator implements IGenerator {
 			return (x as Instantiation).compile(statements)
 		}
 		
-		else if (x instanceof BinaryExpression){
-			return(x as BinaryExpression).compile(statements)
-		}
-		else if (x instanceof UnaryExpression){
-			return(x as UnaryExpression).compile(statements)
-		}
+		
 		else if (x instanceof VarCall){
 			return(x as VarCall).compile(statements)
 		}
 		return ""
 		
-		
 	}
+
 	
 	def compile(Return decl,List<CharSequence> statements) 
 		'''return «decl.xp.compile(statements)»'''
@@ -227,17 +273,30 @@ class WebifulGenerator implements IGenerator {
 	def compile(Literal decl,List<CharSequence> statements){ 
 	
 		if (decl instanceof StringLiteral)
-			return '''"«decl.value»"'''
-		else
-			return decl.value.toString
+			return '''"«(decl as StringLiteral).value»"'''
+		else if (decl instanceof IntegerLiteral)
+			return (decl as IntegerLiteral).value.toString
+		else if (decl instanceof DecimalLiteral)
+			return (decl as DecimalLiteral).value.toString
+		else if (decl instanceof DecimalLiteral)
+			return (decl as DecimalLiteral).value.toString
+		else if (decl instanceof HashLiteral)
+			return (decl as HashLiteral).compile(statements)
 	}
-	
+	def compile(HashLiteral decl,List<CharSequence> statements){ 
+		return '''array(«FOR p:decl.pairs»
+				«IF p.key instanceof StrKeyType»«(p.key as StrKeyType).name.compile(statements)»«ELSE»"«(p.key as IdKeyType).name»"«ENDIF»=>«p.value.compile(statements)»,
+				«ENDFOR»
+			)
+		'''	
+	}
 	def compile(BinaryExpression decl,List<CharSequence> statements) 
-		'''«decl.leftOperand.compile(statements)»«decl.op»«decl.rightOperand.compile(statements)»'''
-	
+		'''«decl.binaryOp»«decl.terms.compile(statements)»'''
+		
+		
 	def compile(UnaryExpression decl,List<CharSequence> statements) 
-		'''«decl.op.toString»«decl.operand.compile(statements)»'''
-	
+		//'''«decl.op.toString»«decl.operand.compile(statements)»'''
+		''''''
 	def compile(Instantiation instantiation,List<CharSequence> statements){
 		var varName="tmp_"+UUID::randomUUID().toString.replace("-","")
 		statements.add('''$«varName»=new «instantiation.caller.fullyQualifiedName.toString("_")»«instantiation.params.compile(statements)»''')
@@ -273,11 +332,11 @@ class WebifulGenerator implements IGenerator {
 
 	
 	def compile(Params params){
-		var lst=params.list
+		
 		var result=""
 		
-		if (lst.size>0) {
-			
+		if (params!=null && params.list!=null && params.list.size>0) {
+			var lst=params.list
 				result="$"+lst.get(lst.size-1).name
 				if (lst.size>1) {
 					result='''( «FOR p:0..lst.size-2»$«lst.get(p).name»,«ENDFOR» «result» )'''
@@ -315,12 +374,22 @@ class WebifulGenerator implements IGenerator {
 	'''
 
 	def compile(VarCall call,List<CharSequence> statements){
-		return "$"+call.varKind.name
+		var name=""
+		if (call.varKind instanceof Property)
+			name=(call.varKind as Property).propertyName
+		if (call.varKind instanceof Param)
+			name=(call.varKind as Param).name
+		if (call.varKind instanceof LocalVarDecl)
+		name=(call.varKind as LocalVarDecl).name
+			
+		return "$"+name
 	} 
-	def compile(MemberCall call,List<CharSequence> statements) {
-//		var varName="tmp_"+UUID::randomUUID().toString.replace("-","")
-//		statements.add('''$«varName»=«call.caller.compile(statements)»''')
-		return '''«call.caller.compile(statements)»->«IF call.member instanceof Property»«(call.member as Property).name»«ELSE»«(call.member as Method).name»«call.methodsParams.compile(statements)»«ENDIF»'''
+
+	def compile(MethodCallExpr call,List<CharSequence> statements) {
+		return '''->«call.member.name»«call.methodsParams.compile(statements)»'''
+	}
+	def compile(PropertyCallExpr call,List<CharSequence> statements) {
+		return '''->«call.member.propertyName»'''
 	}
 	
 	def compile(MagicPhp mag,List<CharSequence> statements) 
@@ -339,13 +408,13 @@ class WebifulGenerator implements IGenerator {
 		}
 	'''
 	def compile(Property prop) '''
-		private $_«prop.name»;
-		function set_«prop.name»($value) {
-			$this->_«prop.name»=$value;	
+		private $_«prop.propertyName»;
+		function set_«prop.propertyName»($value) {
+			$this->_«prop.propertyName»=$value;	
 		}
 		
-		function get_«prop.name»() {
-			return $this->_«prop.name»;	
+		function get_«prop.propertyName»() {
+			return $this->_«prop.propertyName»;	
 		}
 	'''
 

@@ -5,7 +5,9 @@ package eban.scoping;
 
 import eban.TypeSystemResolver;
 import eban.webiful.Controller;
-import eban.webiful.MemberCall;
+import eban.webiful.Expression;
+import eban.webiful.MethodCallExpr;
+import eban.webiful.PropertyCallExpr;
 import eban.webiful.Route;
 import eban.webiful.Type;
 
@@ -13,6 +15,8 @@ import eban.webiful.Type;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
+import org.eclipse.emf.ecore.util.EcoreUtil;
+import org.eclipse.xtext.generator.parser.antlr.splitting.simpleExpressions.MethodCall;
 import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.Scopes;
 import org.eclipse.xtext.scoping.impl.AbstractDeclarativeScopeProvider;
@@ -31,42 +35,53 @@ public class WebifulScopeProvider extends AbstractDeclarativeScopeProvider {
 
 	@Override
 	public IScope getScope(EObject context, EReference reference) {
-		
-		IScope scope = super.getScope(context, reference);
-		
-		
+		//EcoreUtil.resolveAll(context.eResource());
 		if (reference.getName().equals("member")) {
-			if (MemberCall.class.isAssignableFrom(context.getClass())) {
-				MemberCall meth = (MemberCall) context;
-				TypeSystemResolver typeSystemResolver = new TypeSystemResolver();
-				Type type=typeSystemResolver.resolveType(meth.getCaller());
+			
+			Type type=null;
+			TypeSystemResolver typeSystemResolver = new TypeSystemResolver();
+			
+			
+			
+			try {
+				if (context instanceof Expression)
+					type=typeSystemResolver.resolveType((Expression)context,context);
+				else if (context.eContainer() instanceof Expression)
+					type=typeSystemResolver.resolveType((Expression)context.eContainer(),context);
 				
-				System.out.println("Type for "+meth.getCaller()+" resolved to "+ typeSystemResolver.getTypeName(type));
+			} catch (Throwable e) {
+				System.out.println("Context: "+context);
+				System.out.println("reference: "+reference);
+				e.printStackTrace();
+			}
+			
 				
-				if (type==null)
-					scope=Scopes.scopeFor(Lists.<EObject>newArrayList());
-				else 
-					scope = Scopes.scopeFor(type.eContents());	
-				
-					
-				
-				 
-			} else 
-				scope=Scopes.scopeFor(Lists.<EObject>newArrayList());
+			if (type!=null)
+				{
+				//System.out.println("resolved to "+typeSystemResolver.getTypeName(type)+" with "+type.eContents());
+				return Scopes.scopeFor(type.eContents());
+				}
+			else {
+				System.out.println("Unable to resolve context: "+context);
+				System.out.println("reference: "+reference);
+			}
+			return Scopes.scopeFor(Lists.<EObject>newArrayList());
+			
 		} else if (reference.getName().equals("action")) {
 			if (Route.class.isAssignableFrom(context.getClass())) {
 				Route r = (Route) context;
 				
 				
 				
-				scope = Scopes.scopeFor(r.getCtrl().getFeatures());
+				return Scopes.scopeFor(r.getCtrl().getFeatures());
 				
 				 
-			} else 
-				scope=Scopes.scopeFor(Lists.<EObject>newArrayList());
+			}
+			
+			return Scopes.scopeFor(Lists.<EObject>newArrayList());
 		}
 
-		return scope;
+		return super.getScope(context, reference);
 	}
 
 }
