@@ -1,0 +1,275 @@
+grammar eban.Webiful hidden(WS, ML_COMMENT, SL_COMMENT)
+
+
+generate webiful "http://www.ebansoftware.net/webiful"
+		
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
+
+Webiful:
+	(elements+=AbstractElement)*;
+
+terminal ID  		: ('a'..'z'|'A'..'Z') ('a'..'z'|'A'..'Z'|'0'..'9')*;
+	
+terminal STRING	: 
+			'"' ( '\\' ('b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\') | !('\\'|'"') )* '"' |
+			"'" ( '\\' ('b'|'t'|'n'|'f'|'r'|'u'|'"'|"'"|'\\') | !('\\'|"'") )* "'"
+		; 
+terminal ML_COMMENT	: '/*' -> '*/';
+terminal SL_COMMENT 	: '//' !('\n'|'\r')* ('\r'? '\n')?;
+
+terminal WS			: (' '|'\t'|'\r'|'\n')+;
+terminal OP_ASSIGN:'=';
+terminal OP_OR:'||';
+terminal OP_AND:'&&';
+terminal OP_EQUALS:'==';
+terminal OP_NOTEQUALS:'!=';
+terminal OP_LESSTHAN:'<';
+terminal OP_GREATERTHAN:'>';
+terminal OP_LESSTHANEQUALS:'<=';
+terminal OP_GREATERTHANEQUALS:'>=';
+terminal OP_MAPTO:':';
+terminal OP_UPTO:'..';
+terminal OP_PLUS:'+';
+terminal OP_MINUS:'-';
+terminal OP_MULTUPLY:'*';
+terminal OP_DIVIDE:'/';
+terminal OP_MODULO:'%';
+terminal OP_NOT:'!';
+terminal OP_SHARP:'#';
+
+terminal ANY_OTHER: .;
+
+terminal DECIMAL :('0'..'9')+ '.'  ('0'..'9')+;
+terminal INTEGER : ('0'..'9')+;
+
+Literal:
+	DecimalLiteral | IntegerLiteral | StringLiteral
+;
+
+DecimalLiteral:
+	value=DECIMAL
+;
+IntegerLiteral:
+	value=INTEGER
+;
+StringLiteral:
+	value=STRING
+;
+PackageDeclaration:
+	'package' name=QualifiedName '{'
+	(elements+=AbstractElement)*
+	'}';
+
+AbstractElement:
+	PackageDeclaration | Type | Import;
+
+QualifiedName:
+	ID ('.' ID)*;
+
+
+
+Import:
+	'import' importedNamespace=QualifiedName;
+//
+//QualifiedNameWithWildcard:
+//	QualifiedName '.*'?;
+
+Type:
+	Clazz | Entity | EntryPoint | Controller | DataType;
+
+DataType:
+	'datatype' name=ID;
+
+Entity:
+	'entity' name=ID (OP_MAPTO superType=[Entity | QualifiedName	])? '{'
+	features+=Feature*
+	'}';
+	
+Clazz:
+	'class' name=ID (OP_MAPTO superType=[Clazz | QualifiedName	])? params=Params?'{'
+	features+=Feature*
+	'}';
+	
+Controller:
+	'controller' name=ID (OP_MAPTO superType=[Controller | QualifiedName	])? '{'
+	features+=Method*
+	'}';
+
+
+
+Feature:
+	Property | Method;
+
+Property:
+	many?='many'? name=ID OP_MAPTO type=[Type | QualifiedName];
+
+
+Param:
+	name=ID OP_MAPTO type=[Type | QualifiedName] 
+;
+
+Params:
+	'[' (
+		list+=Param (',' list+=Param)* 
+	) ']' | 
+	{Params}
+	'[' ']'
+;
+
+
+ParamCall:
+	xp=Expression
+;
+
+ParamsCall:
+	'[' (
+		list+=ParamCall (',' list+=ParamCall)* 
+	) ']' | 
+	{ParamsCall}
+	'[' ']'
+;
+	
+
+Method:
+	
+	'fun' name=ID params=Params OP_MAPTO type=[Type | QualifiedName] 
+	methodBody=ExpressionsBlock
+;	
+
+
+
+
+ExpressionsBlock:
+	{ExpressionsBlock}
+	
+	(
+     '{' expressions+=Statement (expressions+=Statement)* '}' 
+   	 | expressions+=Statement
+	)
+;
+
+BinaryExpression:
+	'(' leftOperand=Expression op=Operator rightOperand=Expression ')' 
+;
+
+
+UnaryExpression:
+	op=UnaryOperator operand=Expression 
+;
+
+Expression:
+	
+	(MagicPhp |  
+	Literal | 
+	Instantiation | 
+	BinaryExpression  |   
+	UnaryExpression | 
+	VarCall | 
+	MemberCall) 
+;
+
+Statement:
+	LocalVarDecl | Expression | Return | For | If 
+;
+
+If:
+	'if' '(' condition=Expression')' then=ExpressionsBlock 'else' else=ExpressionsBlock
+;
+
+ForVar:
+	name=ID OP_MAPTO type=[Type | QualifiedName]
+;
+
+For:
+	'for' '(' forVar=ForVar 'in' condition=Expression ')' doBlock=ExpressionsBlock 
+;
+
+Return:
+	'return' xp=Expression
+;
+	
+MagicPhp:
+	'__(' instr=STRING ')__'
+;
+
+
+
+LocalVarDecl:
+	'var' name=ID OP_MAPTO type=[Type | QualifiedName] (OP_ASSIGN assignment=Expression)
+;
+
+
+CalledMember:
+	Property | ( Method methodsParams=ParamsCall )
+;
+
+Instantiation:
+	'new' caller=[Type] params=ParamsCall
+;
+
+//Reference:
+//	Feature | LocalVarDecl 
+//;
+
+MemberCall:
+	OP_LESSTHAN  caller=Expression '.'  (
+		member=[Property] |
+		member=[Method] methodsParams=ParamsCall 
+	) OP_GREATERTHAN
+;
+
+VarKinds:
+	Param | LocalVarDecl | Property
+;
+
+VarCall:
+	OP_SHARP varKind=[VarKinds]
+;
+
+Operator:
+	OP_ASSIGN | OP_OR | OP_AND | OP_EQUALS | OP_NOTEQUALS | 
+	OP_LESSTHAN | OP_GREATERTHAN | OP_LESSTHANEQUALS |   
+	OP_GREATERTHANEQUALS | OP_MAPTO | OP_UPTO |     
+	OP_PLUS | OP_MINUS | OP_MULTUPLY | OP_DIVIDE | OP_MODULO 
+	 
+;
+
+UnaryOperator:
+	OP_NOT | OP_MINUS
+;
+
+
+Route:
+	('GET' | 'POST') url=STRING '->' 
+	ctrl=[Controller] '.' action=[Method] 'with' template=STRING	
+;
+
+
+Routes:
+	{Routes}
+	list+=Route*	
+;
+
+EntryPoint:
+	'routes' '{' entryPointBody=Routes '}'
+;	
+
+
+//
+//Attribute:
+//	name=ID OP_ASSIGN value=STRING
+//;
+//
+//Attributes:
+//	list+=Attribute (list+=Attribute)* |
+//	(
+//		{Attributes}
+//		list+=Attribute?
+//	) 
+//;
+//
+//
+//Tag:
+//	OP_LESSTHAN name=ID OP_GREATERTHAN
+//;
+//

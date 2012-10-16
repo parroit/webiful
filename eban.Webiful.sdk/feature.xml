@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature id="eban.Webiful.sdk"
+	label="Webiful SDK Feature "
+	version="1.0.0.qualifier">
+	<plugin
+			id="eban.Webiful"
+			download-size="0"
+			install-size="0"
+			version="0.0.0"
+			unpack="false"/>
+	<plugin
+			id="eban.Webiful.ui"
+			download-size="0"
+			install-size="0"
+			version="0.0.0"
+			unpack="false"/>
+</feature>
