@@ -95,14 +95,14 @@ Import:
 
 
 Type:
-	Clazz | Entity | EntryPoint | Controller | DataType | MagicPhp;
+	Clazz | Entity | EntryPoint | Controller | DataType | MagicPhpBlock;
 
 DataType:
 	'datatype' name=ID;
 
 Entity:
 	'entity' name=ID (OP_MAPTO superType=[Entity])? '{'
-	features+=FeatureOrMagic*
+	features+=EntityFeatureOrMagic*
 	'}';
 	
 Clazz:
@@ -121,6 +121,9 @@ MethodOrMagic:
 FeatureOrMagic:
 	Feature| MagicPhpBlock
 ;
+EntityFeatureOrMagic:
+	EntityProperty |Feature| MagicPhpBlock
+;
 
 Feature:
 	Property | Method;
@@ -128,6 +131,10 @@ Feature:
 Property:
 	many?='many'? propertyName=ID OP_MAPTO propertyType=[Type];
 
+
+EntityProperty:
+	(OP_LESSTHAN many?='many'? key?='key'? ('column' column=ID)? OP_GREATERTHAN) propertyName=ID OP_MAPTO propertyType=[Type] 
+;
 
 Param:
 	name=ID OP_MAPTO type=[Type] 
@@ -183,10 +190,10 @@ Expression:
 ContinuationExpr:
 	BinaryExpression | 
 	PropertyCallExpr | 
-	MethodCallExpr /*|
-	IndexSetExpr|
-	IndexGetExpr*/ 
+	MethodCallExpr |
+	IndexGetExpr 
 ;
+
 
 BinaryExpression:
 	binaryOp=Operator terms=TerminalExpr
@@ -202,16 +209,17 @@ MethodCallExpr:
 	'.' member=[Method | ID] methodsParams=ParamsCall
 	
 ;
-//
-//IndexGetExpr:
-//	'[' index=Expression ']'
-//	
-//;
-//
-//IndexSetExpr:
-//	'[' index=Expression ']' ':=' 
-//	
-//;
+
+IndexGetExpr:
+	'[' index=Expression ']'
+	
+;
+
+
+AssignStatement:
+	'set' target=Expression  OP_ASSIGN source=Expression 
+	
+;
 
 
 TerminalExpr:
@@ -227,7 +235,7 @@ TerminalExpr:
 
 
 Statement:
-	LocalVarDecl | Expression | Return | For | If 
+	  AssignStatement | LocalVarDecl | Return | For | If  | Expression   
 ;
 
 If:
@@ -275,7 +283,7 @@ VarCall:
 ;
 
 Operator:
-	OP_ASSIGN | OP_OR | OP_AND | OP_EQUALS | OP_NOTEQUALS | 
+	OP_OR | OP_AND | OP_EQUALS | OP_NOTEQUALS | 
 	OP_LESSTHAN | OP_GREATERTHAN | OP_LESSTHANEQUALS |   
 	OP_GREATERTHANEQUALS | OP_MAPTO | OP_UPTO |     
 	OP_PLUS | OP_MINUS | OP_MULTUPLY | OP_DIVIDE | OP_MODULO 

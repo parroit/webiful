@@ -8,6 +8,7 @@ import org.eclipse.xtext.validation.Check;
 import com.google.common.collect.Lists;
 
 import eban.webiful.Entity;
+import eban.webiful.EntityFeatureOrMagic;
 import eban.webiful.Feature;
 import eban.webiful.FeatureOrMagic;
 import eban.webiful.Method;
@@ -19,7 +20,7 @@ public class WebifulJavaValidator extends AbstractWebifulJavaValidator {
 	@Check
 	public void checkFeatureNameIsUnique(Entity entity) {
 		List<String> names = Lists.newArrayList();
-		for (FeatureOrMagic f : entity.getFeatures()) {
+		for (EntityFeatureOrMagic f : entity.getFeatures()) {
 			String name = null;
 			EAttribute attribute = null;
 			if (f instanceof Property)

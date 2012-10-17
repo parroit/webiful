@@ -28,6 +28,7 @@ import eban.webiful.WebifulPackage
 import eban.webiful.impl.TypeImpl
 import eban.webiful.impl.WebifulImpl
 import eban.webiful.util.WebifulAdapterFactory
+import eban.webiful.IndexGetExpr
 
 class TypeSystemResolver {
 	def Type resolveType(EObject x) {
@@ -136,6 +137,8 @@ class TypeSystemResolver {
 				newType=(cont as MethodCallExpr).member.type
 			else if (cont instanceof PropertyCallExpr)
 				newType=(cont as PropertyCallExpr).member.propertyType
+			else if (cont instanceof IndexGetExpr)
+				newType=(currentType.eContents.filter(typeof(Method)).filter(f|f.name=="get").head as Method).type
 			else 
 				newType=resolveType(cont)
 				

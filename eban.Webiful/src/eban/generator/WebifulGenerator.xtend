@@ -23,7 +23,6 @@ import eban.webiful.Params
 import eban.webiful.ParamsCall
 import eban.webiful.ParamCall
 import eban.webiful.VarCall
-import eban.webiful.Routes
 import eban.webiful.Route
 import eban.webiful.Controller
 import eban.webiful.Return
@@ -38,13 +37,10 @@ import com.google.common.base.Joiner
 import java.util.List
 import eban.webiful.MethodOrMagic
 import eban.webiful.FeatureOrMagic
-import eban.webiful.Feature
-import eban.webiful.MagicPhp
 import eban.webiful.MagicPhpBlock
 import eban.webiful.TerminalExpr
 import eban.webiful.ContinuationExpr
 import org.eclipse.emf.common.util.EList
-import eban.webiful.LocalVarDecl
 import eban.webiful.PropertyCallExpr
 import eban.webiful.MethodCallExpr
 
@@ -53,9 +49,14 @@ import eban.webiful.DecimalLiteral
 import eban.webiful.HashLiteral
 import eban.webiful.StrKeyType
 import eban.webiful.IdKeyType
+import eban.webiful.EntityFeatureOrMagic
+import eban.webiful.EntityProperty
+import eban.webiful.IndexGetExpr
+import eban.webiful.AssignStatement
+import eban.webiful.AssignStatement
 
 class WebifulGenerator implements IGenerator {
-	Param runtimeType
+	//Param runtimeType
 	
 	@Inject extension IQualifiedNameProvider
 	
@@ -76,6 +77,9 @@ class WebifulGenerator implements IGenerator {
 		require_once 'routing.php';
 		«ENDIF»
 		
+		«FOR php: resource.contents.get(0).eContents.filter(typeof(MagicPhpBlock))»
+			«php.compile»
+		«ENDFOR»
 		
 		«FOR imp: resource.allContents.toIterable.filter(typeof(Import))»
 		require_once '«imp.importedNamespace.toString().replace(".","/")+ ".php"»';
@@ -96,6 +100,7 @@ class WebifulGenerator implements IGenerator {
 		«e.compile»
 		«ENDFOR»
 		'''
+	
 	def compile(Clazz e) 
 		'''class «e.fullyQualifiedName.toString("_")»«IF e.superType != null» extends «e.superType.fullyQualifiedName.toString("_")»«ENDIF» {
 		«IF e.params!=null»
@@ -136,7 +141,14 @@ class WebifulGenerator implements IGenerator {
 			
 	}
 
-
+	def compile(EntityFeatureOrMagic magic) {
+		if (magic instanceof EntityProperty)
+			return (magic as EntityProperty).compile
+		if (magic instanceof Method)
+			return (magic as Method).compile
+		if (magic instanceof MagicPhpBlock)
+			return (magic as MagicPhpBlock).compile
+	}
 	def compile(FeatureOrMagic magic) {
 		if (magic instanceof Property)
 			return (magic as Property).compile
@@ -150,14 +162,36 @@ class WebifulGenerator implements IGenerator {
 
 		
 	def compileEntity(Entity e) 
-		'''class «e.fullyQualifiedName.toString("_")»«IF e.superType != null» extends «e.superType.fullyQualifiedName.toString("_")»«ENDIF» {
+		'''
+		/**
+		 * @Entity @Table(name="users")
+		 **/
+		class «e.fullyQualifiedName.toString("_")»«IF e.superType != null» extends «e.superType.fullyQualifiedName.toString("_")»«ENDIF» {
 		
 		«FOR f:e.features»
 			
 			«f.compile»
 			
 		«ENDFOR»
-		
+		public function __get($name)
+	    {
+			«FOR f:e.features.filter(typeof(EntityProperty))»
+			if ('«f.propertyName»' == $name) {
+				return $this->get_«f.propertyName»();
+			}	
+			«ENDFOR»
+	        
+	    }
+	
+		public function __isset($name)
+	    {
+			«FOR f:e.features.filter(typeof(EntityProperty))»
+			if ('«f.propertyName»' == $name) {
+				return true;
+			}	
+			«ENDFOR»
+	        return false;
+	    }
 	}
 	'''
 	
@@ -189,8 +223,13 @@ class WebifulGenerator implements IGenerator {
 		else if (x instanceof LocalVarDecl){
 			return(x as LocalVarDecl).compile(statements)
 		} 
+		else if (x instanceof AssignStatement){
+			return(x as AssignStatement).compile(statements)
+		} 
 		return ""
 	}
+	
+	
 	
 	def String compile(For forStatement,List<CharSequence> statements) {
 		return '''for («forStatement.condition.compile(statements)» as $«forStatement.forVar.name») 
@@ -226,17 +265,54 @@ class WebifulGenerator implements IGenerator {
 			else if (x instanceof BinaryExpression){
 				subStatements.add((x as BinaryExpression).compile(statements))
 			}
-//			else if (x instanceof IndexExpr){
-//				subStatements.add((x as IndexExpr).compile(statements))
-//			}
+			else if (x instanceof IndexGetExpr){
+				subStatements.add((x as IndexGetExpr).compile(statements))
+			}
+//			else if (x instanceof IndexSetExpr){
+//				subStatements.add((x as IndexSetExpr).compile(statements))
 			
 		}
 				
 		return Joiner::on("").join(subStatements)
 	}
-//	def CharSequence compile(IndexExpr expr, List<CharSequence> statements) {
-//		return '''->get(«expr.index.compile(statements)»)'''
-//	}
+	def CharSequence compile(IndexGetExpr expr, List<CharSequence> statements) {
+		print("")
+		if (expr.eContainer !=null && expr.eContainer.eContainer instanceof AssignStatement){
+			var parentExpression=expr.eContainer as Expression
+			var assignment=expr.eContainer.eContainer as AssignStatement
+			var isLastXp=(
+				(parentExpression.terms==expr && parentExpression.continuation==null ) ||
+				parentExpression.continuation.get(parentExpression.continuation.size-1)==expr
+				
+			)
+						
+			
+			if (isLastXp && assignment.target==parentExpression){
+				return '''->let(«expr.index.compile(statements)»,«assignment.source.compile(statements)»)'''
+			}
+		}
+		
+		
+		return '''->get(«expr.index.compile(statements)»)'''
+	}
+
+	def CharSequence compile(AssignStatement assign,List<CharSequence> statements) {
+		print("")
+		if (
+				((assign.target.continuation==null || assign.target.continuation.size==0)&& 
+				assign.target.terms instanceof IndexGetExpr) 
+			)
+			return assign.target.compile(statements)
+			
+			
+		if	 (assign.target.continuation!=null &&
+				 	assign.target.continuation.size>0 &&
+				 	assign.target.continuation.get(assign.target.continuation.size-1)instanceof IndexGetExpr
+		 	) {
+				return assign.target.compile(statements)
+		}
+		return assign.target.compile(statements)+" = "+assign.source.compile(statements)	
+	}
 
 
 	def compile(TerminalExpr x,List<CharSequence> statements) { 
@@ -408,6 +484,20 @@ class WebifulGenerator implements IGenerator {
 		}
 	'''
 	def compile(Property prop) '''
+		private $_«prop.propertyName»;
+		function set_«prop.propertyName»($value) {
+			$this->_«prop.propertyName»=$value;	
+		}
+		
+		function get_«prop.propertyName»() {
+			return $this->_«prop.propertyName»;	
+		}
+	'''
+	
+	def compile(EntityProperty prop) '''
+		/**
+		* «IF prop.key»@Id«ENDIF» @Column(type="«prop.propertyType.fullyQualifiedName.toString("_").toLowerCase»"«IF prop.column!=null»,name="«prop.column»"«ELSE»,name="«prop.propertyName»"«ENDIF»)
+		**/
 		private $_«prop.propertyName»;
 		function set_«prop.propertyName»($value) {
 			$this->_«prop.propertyName»=$value;	
