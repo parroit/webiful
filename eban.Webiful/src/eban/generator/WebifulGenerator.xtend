@@ -283,7 +283,7 @@ class WebifulGenerator implements IGenerator {
 		return Joiner::on("").join(subStatements)
 	}
 	def CharSequence compile(IndexGetExpr expr, List<CharSequence> statements) {
-		print("")
+		
 		if (expr.eContainer !=null && expr.eContainer.eContainer instanceof AssignStatement){
 			var parentExpression=expr.eContainer as Expression
 			var assignment=expr.eContainer.eContainer as AssignStatement
@@ -302,22 +302,41 @@ class WebifulGenerator implements IGenerator {
 		
 		return '''->get(«expr.index.compile(statements)»)'''
 	}
-
-	def CharSequence compile(AssignStatement assign,List<CharSequence> statements) {
-		print("")
-		if (
-				((assign.target.continuation==null || assign.target.continuation.size==0)&& 
-				assign.target.terms instanceof IndexGetExpr) 
+	
+	def compile(PropertyCallExpr expr,List<CharSequence> statements) {
+		if (expr.eContainer !=null && expr.eContainer.eContainer instanceof AssignStatement){
+			var parentExpression=expr.eContainer as Expression
+			var assignment=expr.eContainer.eContainer as AssignStatement
+			var isLastXp=(
+				(parentExpression.terms==expr && parentExpression.continuation==null ) ||
+				parentExpression.continuation.get(parentExpression.continuation.size-1)==expr
+				
 			)
+						
+			
+			if (isLastXp && assignment.target==parentExpression){
+				return '''->set_«expr.member.name»(«assignment.source.compile(statements)»)'''
+			}
+		}
+		
+		
+		return '''->get_«expr.member.name»()'''
+	}
+	def lastTerm(Expression x){
+		if (x.continuation==null || x.continuation.size==0)
+			return x.terms
+			
+		return x.continuation.get(x.continuation.size-1)
+	}
+	def CharSequence compile(AssignStatement assign,List<CharSequence> statements) {
+		
+		if (assign.target.lastTerm instanceof IndexGetExpr) 
+			return assign.target.compile(statements)
+		
+		if (assign.target.lastTerm instanceof PropertyCallExpr) 
 			return assign.target.compile(statements)
 			
 			
-		if	 (assign.target.continuation!=null &&
-				 	assign.target.continuation.size>0 &&
-				 	assign.target.continuation.get(assign.target.continuation.size-1)instanceof IndexGetExpr
-		 	) {
-				return assign.target.compile(statements)
-		}
 		return assign.target.compile(statements)+" = "+assign.source.compile(statements)	
 	}
 
@@ -457,13 +476,13 @@ class WebifulGenerator implements IGenerator {
 	def compile(VarCall call,List<CharSequence> statements){
 		var name=""
 		if (call.varKind instanceof Property)
-			name=(call.varKind as Property).name
-		if (call.varKind instanceof This)
+			name="this->_"+(call.varKind as Property).name
+		else if (call instanceof This )
 			name="this"
-		if (call.varKind instanceof Param)
+		else if (call.varKind instanceof Param)
 			name=(call.varKind as Param).name
-		if (call.varKind instanceof LocalVarDecl)
-		name=(call.varKind as LocalVarDecl).name
+		else if (call.varKind instanceof LocalVarDecl)
+			name=(call.varKind as LocalVarDecl).name
 			
 		return "$"+name
 	} 
@@ -471,9 +490,7 @@ class WebifulGenerator implements IGenerator {
 	def compile(MethodCallExpr call,List<CharSequence> statements) {
 		return '''->«call.member.name»«call.methodsParams.compile(statements)»'''
 	}
-	def compile(PropertyCallExpr call,List<CharSequence> statements) {
-		return '''->«call.member.name»'''
-	}
+	
 	
 	def compile(MagicPhp mag,List<CharSequence> statements) 
 		'''«mag.instr»'''

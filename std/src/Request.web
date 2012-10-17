@@ -2,16 +2,21 @@ import Hash
 datatype Void
 
 class Request{
-	var params:Hash
+	var getArgs:Hash
+	var postArgs:Hash
+	var headers:Hash
+	var cookies:Hash
 	
 	new {
-		
-		set params = new Hash(_("$_GET[$k]")_).union(new Hash("$_POST[$k]"))
-			
+		set this.getArgs = new Hash(_("$_GET")_)
+		set this.postArgs = new Hash(_("$_POST")_)
+		set this.headers = new Hash(_("$_SERVER")_)
+		set this.cookies= new Hash(_("$_COOKIE")_)
 	}
 	
-	fun dump(a:String):Void{
-		_("print_r($this->_params)")_
+	fun dump():Void{
+		var all:Hash=getArgs.union(postArgs).union(headers).union(cookies) 
+		_("print_r($all->get_source())")_
 	}
 	
 	

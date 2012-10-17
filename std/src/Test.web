@@ -2,8 +2,8 @@ import String
 import Assert
 import Int
 import Hash
+import Request
 
-datatype PowerLevel
 
 
 	
@@ -11,7 +11,7 @@ datatype PowerLevel
 	
 	controller Tests  {
 		fun testHash():String { 
-			var results:String=""
+			
 			var assert:Assert=new Assert()
 			
 			var h:Hash=new Hash(json {
@@ -51,12 +51,12 @@ datatype PowerLevel
 			assert.areEquals(intersection.containsKey("int"), _("true")_)
 			
 			var req:Request=new Request()
-			req.dump()
+			//req.dump()
 			
 			return assert.results
 		}
 		fun testString():String { 
-			var results:String=""
+			
 			var assert:Assert=new Assert()
 			
 			assert.areEquals(new String("  ..this is a show!..   ").trim(),new String("..this is a show!.."))
@@ -70,8 +70,7 @@ datatype PowerLevel
 			
 			
 			
-			
-			return _("$assert->get_results()")_
+			return assert.results
 		}
 		
 		
