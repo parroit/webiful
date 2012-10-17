@@ -1,0 +1,13 @@
+<html>
+<body>
+
+	<ul>
+	{% for user in data %}
+		<li><h2><a href="/show?name={{ user.name}}">{{ user.name}}</a> : {{ user.password }}</h2>
+
+		</li>
+	{% endfor %}
+	</ul>
+
+	</body>
+</html>

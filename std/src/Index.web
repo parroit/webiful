@@ -1,6 +1,7 @@
 import String
 import DataStore
 import Test
+import Request
 
 entity User{
 	<key column username> name : String
@@ -10,7 +11,17 @@ entity User{
 controller Admin  {
 	
 	fun index():String { 
-		var store:DataStore=new DataStore(json{
+		var store:DataStore=this.openDb()
+		return store.findAll("User")
+	}
+	fun show():User { 
+		var request:Request=new Request()
+		var name:String=request.getArgs["name"]
+		var store:DataStore=this.openDb()
+		return store.find("User",name)
+	}
+	fun openDb():DataStore{
+		return new DataStore(json{
 			development:_("true")_,
 			entityDir:'.',
 			connection:json {
@@ -21,8 +32,8 @@ controller Admin  {
 			    'password' : 'porta111'
 			}
 		})
-		return store.findAll("User")
 	}
+	
 	
 	
 	
@@ -30,6 +41,7 @@ controller Admin  {
 
 routes {
 	GET "/" ->  Admin.index with "index.html"
+	GET "/show" ->  Admin.show with "show.html"
 	GET "/test-string" ->  Tests.testString with "test.html"
 	GET "/test-hash" ->  Tests.testHash with "test.html"
 		

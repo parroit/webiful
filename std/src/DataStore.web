@@ -22,9 +22,9 @@ class DataStore{
 		_("$repo=$this->entityManager->getRepository($clazz)")_
 		return _("$repo->findAll()")_
 	}
-	fun find(keyValue:Any):Entity{
+	fun find(clazz:String,keyValue:Any):Entity{
 		_("$repo=$this->entityManager->getRepository($clazz)")_
-		return _("$repo->find(keyValue)")_
+		return _("$repo->find($keyValue)")_
 	}
 	
 	fun commit():Void{
