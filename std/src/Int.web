@@ -1,0 +1,16 @@
+datatype Digits
+
+class Int(content:Digits){
+		fun toString():String {
+			
+			return new String(_("(string) $this->_content")_)	
+	
+		}
+		__("
+		public function __toString() {
+			
+			return (string) $this->_content;
+		}
+		")__
+		
+}

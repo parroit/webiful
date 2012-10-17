@@ -1,0 +1,15 @@
+import String
+import Int
+class Assert{
+	var results:String
+	
+	fun areEquals(actual:String,expected:String):String {
+		var result:String=""
+		if (actual!=expected)
+			set result= new String(_("'\\nExpected [' . $expected . '] was [' . $actual .']'")_)
+		else {
+			set result= new String(".")
+		}	
+		_("$this->_results = $this->_results . $result")_
+	}
+}

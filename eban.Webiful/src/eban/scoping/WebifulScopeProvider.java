@@ -3,13 +3,26 @@
  */
 package eban.scoping;
 
+import java.util.List;
+
 import eban.TypeSystemResolver;
+import eban.webiful.Clazz;
 import eban.webiful.Controller;
+import eban.webiful.EntityProperty;
 import eban.webiful.Expression;
+import eban.webiful.Feature;
+import eban.webiful.For;
+import eban.webiful.LocalVarDecl;
+import eban.webiful.Method;
 import eban.webiful.MethodCallExpr;
+import eban.webiful.Params;
+import eban.webiful.Property;
 import eban.webiful.PropertyCallExpr;
 import eban.webiful.Route;
+import eban.webiful.Statement;
 import eban.webiful.Type;
+import eban.webiful.VarCall;
+import eban.webiful.impl.VarCallImpl;
 
 
 import org.eclipse.emf.common.util.EList;
@@ -56,11 +69,16 @@ public class WebifulScopeProvider extends AbstractDeclarativeScopeProvider {
 			}
 			
 				
-			if (type!=null)
-				{
-				//System.out.println("resolved to "+typeSystemResolver.getTypeName(type)+" with "+type.eContents());
-				return Scopes.scopeFor(type.eContents());
+			if (type!=null) {
+				
+				List<EObject> results=Lists.newArrayList();
+				for (EObject f:type.eContents()){
+					if (f instanceof Property || f instanceof EntityProperty || f instanceof Method)
+							results.add(f);
 				}
+				System.out.println("resolved to "+typeSystemResolver.getTypeName(type)+" with "+results);
+				return Scopes.scopeFor(results);
+			}
 			else {
 				System.out.println("Unable to resolve context: "+context);
 				System.out.println("reference: "+reference);
@@ -79,6 +97,41 @@ public class WebifulScopeProvider extends AbstractDeclarativeScopeProvider {
 			}
 			
 			return Scopes.scopeFor(Lists.<EObject>newArrayList());
+		} else if (reference.getName().equals("varKind")) {
+			
+				List<EObject> results=Lists.newArrayList();
+				//if (context instanceof VarCall){
+					EObject clazz=context;
+					while (clazz!=null) {
+						if (clazz instanceof Clazz)
+							{
+								//results.addAll(clazz.eContents());
+								for(EObject f: clazz.eContents()){
+									if (f instanceof Property)
+										results.add(f);
+								}
+								Params params = ((Clazz) clazz).getParams();
+								if (params!=null)
+									results.addAll(params.getList());
+							}
+						else if (clazz instanceof Method)
+							{
+								results.addAll(((Method)clazz).getParams().getList());
+								for(Statement st: ((Method)clazz).getMethodBody().getExpressions()){
+									if (st instanceof LocalVarDecl)
+										results.add(st);
+								}
+							}
+						else if (clazz instanceof For)
+							results.add(((For)clazz).getForVar());
+						
+						clazz=clazz.eContainer();	
+					}
+					System.out.println("Vars: "+results);
+					return Scopes.scopeFor(results);
+					
+				//}	
+			
 		}
 
 		return super.getScope(context, reference);

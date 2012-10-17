@@ -1,0 +1,50 @@
+import String
+import Int
+
+datatype Json
+datatype Any
+datatype Void
+datatype Bool
+
+class Hash(source:Json){
+	fun get(keyValue:String):Any {
+		return _("$this->_source[$keyValue]")_
+	}
+	fun let(keyValue:String,value:Any):Void {
+		_("$this->_source[$keyValue]=$value")_
+	}
+	
+	fun containsValue(value:Any):Bool {
+		return _("$this->_value_in_array ($value,$this->_source)")_
+	}
+	
+	fun union(other:Hash):Hash {
+		return new Hash(_("array_merge($this->_source,$other->_source)")_)
+	}
+	fun intersect(other:Hash):Hash {
+		return new Hash(_("array_uintersect_assoc  ($this->_source,$other->_source,create_function(null, 'return 0;'))")_)
+	}
+	
+
+	__("
+		function _value_in_array($find,$array){
+			 
+			foreach ($array as $key => $value) {
+			  if($find === $value){
+			       return true;
+			  }
+			}
+			
+			return false;
+		}
+	")__
+	
+	fun containsKey(keyValue:String):Bool {
+		return _("array_key_exists ($keyValue,$this->_source)")_
+	}
+	
+	
+	fun len():Int{
+		return _("count($this->_source)")_
+	}
+}

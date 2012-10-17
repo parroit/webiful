@@ -126,10 +126,10 @@ EntityFeatureOrMagic:
 ;
 
 Feature:
-	Property | Method;
+	Property | Method | 'new' ExpressionsBlock;
 
 Property:
-	many?='many'? propertyName=ID OP_MAPTO propertyType=[Type];
+	'var' name=ID OP_MAPTO type=[Type];
 
 
 EntityProperty:
@@ -272,14 +272,16 @@ Instantiation:
 	'new' caller=[Type] params=ParamsCall
 ;
 
-
+This:
+	{This}'this'
+;
 
 VarKinds:
-	Param | LocalVarDecl | Property
+	Param | LocalVarDecl | Property | ForVar 
 ;
 
 VarCall:
-	varKind=[VarKinds]
+	varKind=[VarKinds] | This
 ;
 
 Operator:

@@ -1,0 +1,22 @@
+import Hash
+datatype Void
+
+class Request{
+	var params:Hash
+	
+	new {
+		
+		set params = new Hash(_("$_GET[$k]")_).union(new Hash("$_POST[$k]"))
+			
+	}
+	
+	fun dump(a:String):Void{
+		_("print_r($this->_params)")_
+	}
+	
+	
+		
+	
+	
+			
+}

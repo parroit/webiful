@@ -1,0 +1,83 @@
+import String
+import Assert
+import Int
+import Hash
+
+datatype PowerLevel
+
+
+	
+	
+	
+	controller Tests  {
+		fun testHash():String { 
+			var results:String=""
+			var assert:Assert=new Assert()
+			
+			var h:Hash=new Hash(json {
+				int:12,
+				other: new Hash(json{
+					saluto:"salve",
+					"altro":12*12,
+					"ancora":12*12
+				})
+			})
+			assert.areEquals(h["int"],12)
+			assert.areEquals(h["other"]["saluto"],"salve")
+			set h["int"]=42
+			assert.areEquals(h["int"], 42)
+			assert.areEquals(h.len(), 2.0)
+			//TODO: develop casting
+			//assert.areEquals(h["other"].len(),3.0)
+			
+			assert.areEquals(h.containsKey("other"), _("true")_)
+			assert.areEquals(h.containsKey("intasas"), _("false")_)
+			
+			assert.areEquals(h.containsValue(42), _("true")_)
+			assert.areEquals(h.containsValue(43), _("false")_)
+			
+			var h2:Hash=new Hash(json {
+				int:12,
+				other2: "salve"
+			})
+			var joined:Hash=h.union(h2)
+			assert.areEquals(joined.len(), 3.0)
+			assert.areEquals(joined.containsKey("int"), 3.0)
+			assert.areEquals(joined.containsKey("other"), _("true")_)
+			assert.areEquals(joined.containsKey("other2"), _("true")_)
+			
+			var intersection:Hash=h.intersect(h2)
+			assert.areEquals(intersection.len(), 1.0)
+			assert.areEquals(intersection.containsKey("int"), _("true")_)
+			
+			var req:Request=new Request()
+			req.dump()
+			
+			return assert.results
+		}
+		fun testString():String { 
+			var results:String=""
+			var assert:Assert=new Assert()
+			
+			assert.areEquals(new String("  ..this is a show!..   ").trim(),new String("..this is a show!.."))
+			assert.areEquals(new String("**this is a show!**").replace("*","."),new String("..this is a show!.."))
+			assert.areEquals(new String("**this is a show!**").len().toString(),new String("19"))
+			assert.areEquals(new String("**this is a show!**").find("t").toString(),new String("2"))
+			assert.areEquals(new String("show!**").findFromEnd("w").toString(),new String("3"))
+			assert.areEquals(new String("show!**").subString(0.0,4.0),new String("show"))
+			assert.areEquals(new String("SHOW").toLower(),new String("show"))
+			assert.areEquals(new String("show").toUpper(),new String("SHOW"))
+			
+			
+			
+			
+			return _("$assert->get_results()")_
+		}
+		
+		
+		
+	}
+	
+	
+
+

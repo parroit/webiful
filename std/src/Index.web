@@ -1,0 +1,36 @@
+import String
+import DataStore
+import Test
+
+entity User{
+	<key column username> name : String
+	<column password> password:String
+}
+
+controller Admin  {
+	
+	fun index():String { 
+		var store:DataStore=new DataStore(json{
+			development:_("true")_,
+			entityDir:'.',
+			connection:json {
+			    'driver'   : 'pdo_mysql',
+			    'host'     : '127.0.0.1',
+			    'dbname'   : 'blox',
+			    'user'     : 'root',
+			    'password' : 'porta111'
+			}
+		})
+		return store.findAll("User")
+	}
+	
+	
+	
+}
+
+routes {
+	GET "/" ->  Admin.index with "index.html"
+	GET "/test-string" ->  Tests.testString with "test.html"
+	GET "/test-hash" ->  Tests.testHash with "test.html"
+		
+}

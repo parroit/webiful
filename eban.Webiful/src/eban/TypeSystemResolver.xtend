@@ -29,6 +29,8 @@ import eban.webiful.impl.TypeImpl
 import eban.webiful.impl.WebifulImpl
 import eban.webiful.util.WebifulAdapterFactory
 import eban.webiful.IndexGetExpr
+import eban.webiful.impl.ForVarImpl
+import eban.webiful.This
 
 class TypeSystemResolver {
 	def Type resolveType(EObject x) {
@@ -50,8 +52,14 @@ class TypeSystemResolver {
 		else if (x instanceof UnaryExpression){
 			return(x as UnaryExpression).resolveType()
 		}
+		else if (x instanceof This){
+			return(x as This).resolveType()
+		}
 		else if (x instanceof VarCall){
 			return(x as VarCall).resolveType()
+		}
+		else if (x instanceof ForVarImpl){
+			return(x as ForVarImpl).resolveType()
 		}
 		else if (x instanceof Property){
 			return(x as Property).resolveType()
@@ -99,11 +107,18 @@ class TypeSystemResolver {
 	}
 	
 	def Type resolveType(Property instr) {
-		return instr.propertyType
+		return instr.type
 	}
 	
 	def Type resolveType(Param instr){
 		return instr.type
+	}
+	def Type resolveType(This instr){
+		var EObject obj=instr
+		while (!(obj instanceof Type) || obj==null){
+			obj=obj.eContainer
+		}
+		return obj as Type
 	}
 	def Type resolveType(DecimalLiteral instr){
 		return null	
@@ -122,8 +137,8 @@ class TypeSystemResolver {
 		return if (h==null) null else h.type
 	}
 	def Type resolveType(Property instr,Type parent){
-		var h=parent.eContents.filter(typeof(Property)).filter(m| m.propertyName==instr.propertyName).head
-		return if (h==null) null else h.propertyType
+		var h=parent.eContents.filter(typeof(Property)).filter(m| m.name==instr.name).head
+		return if (h==null) null else h.type
 	}
 	
 	
@@ -136,7 +151,7 @@ class TypeSystemResolver {
 			if (cont instanceof MethodCallExpr)
 				newType=(cont as MethodCallExpr).member.type
 			else if (cont instanceof PropertyCallExpr)
-				newType=(cont as PropertyCallExpr).member.propertyType
+				newType=(cont as PropertyCallExpr).member.type
 			else if (cont instanceof IndexGetExpr)
 				newType=(currentType.eContents.filter(typeof(Method)).filter(f|f.name=="get").head as Method).type
 			else 
@@ -161,6 +176,9 @@ class TypeSystemResolver {
 		return resolveType(instr.varKind)
 	}
 	
+	def Type resolveType(ForVarImpl instr) {
+		return instr.type
+	}
 	def Type resolveType(Method instr) {
 		return instr.type
 	}

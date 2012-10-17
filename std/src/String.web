@@ -1,0 +1,57 @@
+import Int
+datatype Chars
+
+class String(content:Chars){
+		fun trim():String {
+			
+			return new String(_("trim($this->_content)")_)	
+	
+		}
+		fun len():Int {
+			
+			return new Int(_("strlen($this->_content)")_)	
+	
+		}
+		
+		fun toLower():String {
+			
+			return new String(_("strtolower ($this->_content)")_)	
+	
+		}
+		
+		fun toUpper():String {
+			
+			return new String(_("strtoupper ($this->_content)")_)	
+	
+		}
+		
+		fun subString(start:Int,length:Int):Int {
+			
+			return new String(_("substr ($this->_content,$start,$length)")_)	
+	
+		}
+		
+		fun find(whatText:String):Int {
+			
+			return new Int(_("strpos($this->_content,$whatText)")_)	
+	
+		}
+		
+		fun findFromEnd(whatText:String):Int {
+			
+			return new Int(_("strrpos($this->_content,$whatText)")_)	
+	
+		}
+		
+		
+		__("
+		public function __toString() {
+			
+			return $this->_content;
+		}
+		")__
+		fun replace(whatText:String,withText:String):String {
+			return new String(_("str_replace($whatText,$withText, $this->_content)")_)	
+	
+		}
+}

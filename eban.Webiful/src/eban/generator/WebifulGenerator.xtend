@@ -54,6 +54,7 @@ import eban.webiful.EntityProperty
 import eban.webiful.IndexGetExpr
 import eban.webiful.AssignStatement
 import eban.webiful.AssignStatement
+import eban.webiful.This
 
 class WebifulGenerator implements IGenerator {
 	//Param runtimeType
@@ -103,16 +104,22 @@ class WebifulGenerator implements IGenerator {
 	
 	def compile(Clazz e) 
 		'''class «e.fullyQualifiedName.toString("_")»«IF e.superType != null» extends «e.superType.fullyQualifiedName.toString("_")»«ENDIF» {
-		«IF e.params!=null»
-			function __construct«e.params.compile» {
-				«FOR p:e.params.list»
-				$this->_«p.name»=$«p.name»;
+		«IF e.params!=null || e.features.filter(typeof(ExpressionsBlock)).size>0»
+			function __construct«IF e.params!=null»«e.params.compile»«ELSE»()«ENDIF» {
+				«IF e.params!=null»
+					«FOR p:e.params.list»
+					$this->_«p.name»=$«p.name»;
+					«ENDFOR»
+				«ENDIF»	
+				«FOR block:e.features.filter(typeof(ExpressionsBlock))»
+					«block.compile()»
 				«ENDFOR»
 			}
-		
+			«IF e.params!=null»
 			«FOR p:e.params.list»
 				«p.compileConstructorParam»
 			«ENDFOR»
+			«ENDIF»
 		«ENDIF»
 		
 		«FOR f:e.features»
@@ -327,8 +334,6 @@ class WebifulGenerator implements IGenerator {
 		else if (x instanceof Instantiation){
 			return (x as Instantiation).compile(statements)
 		}
-		
-		
 		else if (x instanceof VarCall){
 			return(x as VarCall).compile(statements)
 		}
@@ -452,7 +457,9 @@ class WebifulGenerator implements IGenerator {
 	def compile(VarCall call,List<CharSequence> statements){
 		var name=""
 		if (call.varKind instanceof Property)
-			name=(call.varKind as Property).propertyName
+			name=(call.varKind as Property).name
+		if (call.varKind instanceof This)
+			name="this"
 		if (call.varKind instanceof Param)
 			name=(call.varKind as Param).name
 		if (call.varKind instanceof LocalVarDecl)
@@ -465,7 +472,7 @@ class WebifulGenerator implements IGenerator {
 		return '''->«call.member.name»«call.methodsParams.compile(statements)»'''
 	}
 	def compile(PropertyCallExpr call,List<CharSequence> statements) {
-		return '''->«call.member.propertyName»'''
+		return '''->«call.member.name»'''
 	}
 	
 	def compile(MagicPhp mag,List<CharSequence> statements) 
@@ -484,13 +491,13 @@ class WebifulGenerator implements IGenerator {
 		}
 	'''
 	def compile(Property prop) '''
-		private $_«prop.propertyName»;
-		function set_«prop.propertyName»($value) {
-			$this->_«prop.propertyName»=$value;	
+		private $_«prop.name»;
+		function set_«prop.name»($value) {
+			$this->_«prop.name»=$value;	
 		}
 		
-		function get_«prop.propertyName»() {
-			return $this->_«prop.propertyName»;	
+		function get_«prop.name»() {
+			return $this->_«prop.name»;	
 		}
 	'''
 	

@@ -1,0 +1,53 @@
+datatype Json
+datatype Void
+datatype Any
+datatype Entity
+datatype EntityList
+
+
+__("
+	require_once 'Doctrine\\ORM\\Tools\\Setup.php';
+	use Doctrine\\ORM\\Tools\\Setup;
+")__
+
+class DataStore{
+	fun store(instance:Entity):Void{
+		_("$this->entityManager->persist(instance)")_
+	}
+	
+	fun delete(instance:Entity):Void{
+		_("$this->entityManager->remove(instance)")_
+	}
+	fun findAll(clazz:String):EntityList{
+		_("$repo=$this->entityManager->getRepository($clazz)")_
+		return _("$repo->findAll()")_
+	}
+	fun find(keyValue:Any):Entity{
+		_("$repo=$this->entityManager->getRepository($clazz)")_
+		return _("$repo->find(keyValue)")_
+	}
+	
+	fun commit():Void{
+		_("$this->entityManager->flush()")_
+	}
+	
+	__("
+		private  $entityManager=null; 
+		public function __construct($config) { 		
+			
+			Setup::registerAutoloadPEAR();
+			
+			// Create a simple 'default' Doctrine ORM configuration for XML Mapping
+			$isDevMode = $config['development'];
+			
+			$cfg = Setup::createAnnotationMetadataConfiguration(array(__DIR__ . '/' . $config['entityDir']), $isDevMode);
+			
+			$conn = $config['connection'];
+			
+			// obtaining the entity manager
+			$this->entityManager = \\Doctrine\\ORM\\EntityManager::create($conn, $cfg);
+		}
+		")__
+	
+	
+}

@@ -25,7 +25,7 @@ public class WebifulJavaValidator extends AbstractWebifulJavaValidator {
 			EAttribute attribute = null;
 			if (f instanceof Property)
 				{
-				name = ((Property) f).getPropertyName();
+				name = ((Property) f).getName();
 				attribute=WebifulPackage.Literals.ENTITY__NAME;
 				}
 			else if (f instanceof Method)
